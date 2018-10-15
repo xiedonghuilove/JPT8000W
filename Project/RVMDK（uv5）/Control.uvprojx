@@ -741,6 +741,21 @@
               <FileType>1</FileType>
               <FilePath>..\..\User\src\bsp_heshuqi_sht10.c</FilePath>
             </File>
+            <File>
+              <FileName>bsp_exti.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\User\src\bsp_exti.c</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_os.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\User\src\bsp_os.c</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_timer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\User\src\bsp_timer.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

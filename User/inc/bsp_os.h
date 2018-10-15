@@ -37,6 +37,9 @@ typedef enum
 #define ERROR_E_STOP				(1<<14)
 #define ERROR_WATER					(1<<15)
 
+extern uint32_t g_ulFlowTimerCnt;
+extern uint32_t g_ulFlow;
+
 void Task_Process(void);
 void TaskSysClk_Init(u16 period, u16 prescaler);
 

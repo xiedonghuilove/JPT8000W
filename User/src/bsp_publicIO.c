@@ -26,8 +26,8 @@ void PublicIO_Init(void)
                            TOP_RED_GPIO_CLK|
                            RELAY_3_GPIO_CLK|
                            RELAY_4_GPIO_CLK|
-													 LEAK_WATER_CLK|
-													 RED_CTR_CLK, ENABLE);
+						   LEAK_WATER_CLK|
+						   RED_CTR_CLK, ENABLE);
 
   //推挽输出
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
@@ -74,6 +74,30 @@ void PublicIO_Init(void)
   GPIO_InitStructure.GPIO_Pin = RELAY_4_PIN|RELAY_5_PIN|RELAY_6_PIN|RELAY_7_PIN|RELAY_8_PIN;
   GPIO_Init(RELAY_4_GPIO_PORT, &GPIO_InitStructure);
 
+	//报警输出灯
+	GPIO_InitStructure.GPIO_Pin = WARNING_PIN;
+  GPIO_Init(WARNING_PORT, &GPIO_InitStructure);
+
+	//STOP_CTRL
+	GPIO_InitStructure.GPIO_Pin = STOP_CTRL_PIN;
+  GPIO_Init(STOP_CTRL_PORT, &GPIO_InitStructure);
+
+	//内控使能  PH3  推挽输出
+	GPIO_InitStructure.GPIO_Pin = INSIDE_EN_PIN;
+	GPIO_Init(INSIDE_EN_PORT, &GPIO_InitStructure);
+
+	//内控PWM
+	GPIO_InitStructure.GPIO_Pin = INSIDE_PWM_PIN;
+	GPIO_Init(INSIDE_PWM_PORT, &GPIO_InitStructure);
+
+	//出光模式选择
+	GPIO_InitStructure.GPIO_Pin = LASER_MODE_PIN;
+	GPIO_Init(LASER_MODE_PORT, &GPIO_InitStructure);
+
+	//指示激光控制引脚
+	GPIO_InitStructure.GPIO_Pin = GUIDE_LASER_PIN;
+	GPIO_Init(GUIDE_LASER_PORT, &GPIO_InitStructure);
+	
   //漏水检测 上拉输入，检测低电平
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
@@ -109,20 +133,25 @@ void PublicIO_Init(void)
 	GPIO_InitStructure.GPIO_Pin = STOP_PIN;
   GPIO_Init(STOP_PORT, &GPIO_InitStructure);
 
-	//检测外部红光控制信号。 PG0
+	//检测外部红光控制信号。  下拉输入 PG0
 	GPIO_InitStructure.GPIO_Pin = RED_CTR_PIN;
   GPIO_Init(RED_CTR_PORT, &GPIO_InitStructure);
 
-	//模式检测
+	//模式检测   下拉输入
 	GPIO_InitStructure.GPIO_Pin = MODE_PIN;
 	GPIO_Init(MODE_PORT, &GPIO_InitStructure);
 
-	//远程START检测
+	//远程START检测  下拉输入
 	GPIO_InitStructure.GPIO_Pin = REMOTE_PIN;
 	GPIO_Init(REMOTE_PORT, &GPIO_InitStructure);
 
-	//INTERLOCKB
+	//INTERLOCKB   下拉输入
 	GPIO_InitStructure.GPIO_Pin = INTERLOCKB_PIN;
 	GPIO_Init(INTERLOCKB_PORT, &GPIO_InitStructure);
+
+	//PWM&EN   下拉输入
+	GPIO_InitStructure.GPIO_Pin = PWM_EN_PIN;
+	GPIO_Init(PWM_EN_PORT, &GPIO_InitStructure);
+
 
 }

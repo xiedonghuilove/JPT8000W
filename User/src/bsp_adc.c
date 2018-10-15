@@ -15,7 +15,7 @@ uint32_t g_ulaTempBuf[TEMP_NUM] = {0};
 /*
 *********************************************************************************************************
 *	函 数 名: Power_ADC_GPIO_Init
-*	功能说明: Power_ADC_GPIO_Init GPIO初始化
+*	功能说明: Power_ADC_GPIO_Init GPIO初始化  其中包含功率监控  与 功率采集
 *	形    参:  无
 *	返 回 值: 无
 *********************************************************************************************************
@@ -24,13 +24,19 @@ static void Power_ADC_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStructure;
   // 使能 GPIO 时钟
-  RCC_AHB1PeriphClockCmd(POWER_ADC_GPIO_CLK, ENABLE);
+  RCC_AHB1PeriphClockCmd(POWER_ADC_GPIO_CLK|
+                          POWER_PD_GPIO_CLK, ENABLE);
 
-  // 配置 IO
+  // 功率采集 配置 IO
   GPIO_InitStructure.GPIO_Pin = POWER_ADC_GPIO_PIN;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AIN;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL ; //不上拉不下拉
   GPIO_Init(POWER_ADC_GPIO_PORT, &GPIO_InitStructure);
+
+  //功率监控
+  GPIO_InitStructure.GPIO_Pin = POWER_PD_GPIO_PIN;
+  GPIO_Init(POWER_PD_GPIO_PORT, &GPIO_InitStructure);
+
 }
 /*
 *********************************************************************************************************
@@ -220,6 +226,18 @@ static uint16_t Get_Adc(uint8_t ch)
 	return ADC_GetConversionValue(ADC3);	//返回最近一次ADC1规则组的转换结果
 }
 
+/*
+*********************************************************************************************************
+*	函 数 名: Get_Power_PD_Valtage
+*	功能说明: 获得功率监控电压值
+*	形    参:  ch: 无
+*	返 回 值: uint16_t 功率监控电压AD值
+*********************************************************************************************************
+*/
+uint16_t Get_Power_PD_Valtage(void)
+{
+  return Get_Adc(ADC_Channel_9);
+}
 /*
 *********************************************************************************************************
 *	函 数 名: Get_Adc3_Average

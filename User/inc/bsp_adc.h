@@ -4,10 +4,15 @@
 #include "stm32f4xx.h"
 #include "bsp_sys.h"
 
-// ADC GPIO 宏定义  PB1 --> ADC12_CH9
+// 功率采集 ADC GPIO 宏定义  PB1 --> ADC12_CH9
 #define POWER_ADC_GPIO_PORT    GPIOB
 #define POWER_ADC_GPIO_PIN     GPIO_Pin_1
 #define POWER_ADC_GPIO_CLK     RCC_AHB1Periph_GPIOB
+
+// 功率监控 GPIO 宏定义  PF3 --> ADC3_CH9
+#define POWER_PD_GPIO_PORT    GPIOF
+#define POWER_PD_GPIO_PIN     GPIO_Pin_3
+#define POWER_PD_GPIO_CLK     RCC_AHB1Periph_GPIOF
 
 // ADC 序号宏定义
 #define POWER_ADC              ADC1
@@ -103,5 +108,5 @@ extern uint32_t g_ulaTempBuf[TEMP_NUM];
 void Power_ADC_Init(void);
 void Temperature_ADC_Init(void);
 void Get_16_Temp(void);
-
+uint16_t Get_Power_PD_Valtage(void);
 #endif

@@ -22,6 +22,7 @@
 #include "bsp_heshuqi_sth10.h"
 #include "bsp_adc.h"
 #include "bsp_os.h"
+#include "bsp_exti.h"
 
 //extern uint16_t g_usPowerValue;
 
@@ -43,9 +44,17 @@ int main(void)
 	*/
 	delay_init(180);
 	LED_GPIO_Config();
-	RS232_USART_Config();
+	RS232_USART_Config();									//配置232串口 DMA发送并且使能DMA
+	RS485_USART_Init();
 	PublicIO_Init();
 	TaskSysClk_Init(90-1,1000-1);//1ms
+	bspEXTI_Init();
+	LASER_MODE_INSIDE();//开机默认切换为内控
+	GUIDE_LASER_ON();//上电默认开激光
+
+	USART_DMACmd(RS232_USART,USART_DMAReq_Tx,ENABLE);  //使能串口的DMA发送。
+	USART_DMACmd(RS485_USART,USART_DMAReq_Tx,ENABLE);  //使能串口的DMA发送。
+
 	while(1)
 	{
 		Task_Process();

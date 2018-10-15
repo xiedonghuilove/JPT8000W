@@ -1,9 +1,13 @@
 #include "bsp_os.h"
 #include "bsp_led.h"
 #include "bsp_publicIO.h"
+#include "bsp_usart.h"
+#include "bsp_dma.h"
+
 u32 USER_FLAG=0;//用户标志
 uint32_t g_ulControlAlarm = 0;
-
+uint32_t g_ulFlowTimerCnt = 0;
+uint32_t g_ulFlow = 0;
 void task1(void)
 {
 	static u8 start_cnt=0;
@@ -38,11 +42,17 @@ void task1(void)
       {
         USER_FLAG &= USER_LASER_OFF;//关闭出光预备状态
         PANEL_STAR_OFF();
+				STOP_CTRL_OFF();
+				INSIDE_PWM_OFF();//内控PWM打开
+				INSIDE_EN_OFF();//内控EN打开
       }
   		else //关闭出光预备状态则切换为出光预备状态
   		{
   		  USER_FLAG |= USER_LASER_ON;
-  		  PANEL_STAR_ON();
+  		  PANEL_STAR_ON();//面板灯打开
+				STOP_CTRL_ON();//STOP打开
+				INSIDE_PWM_ON();//内控PWM打开
+				INSIDE_EN_ON();//内控EN打开
   		}
 	  }
 
@@ -53,7 +63,7 @@ void task1(void)
   }
   else
   {
-	g_ulControlAlarm &= ERROR_QBH;
+		g_ulControlAlarm &= ERROR_QBH;
   }
   if(STOP_In() == 1)
   {
@@ -61,15 +71,15 @@ void task1(void)
   }
   else
   {
-	g_ulControlAlarm &= ERROR_E_STOP;
+		g_ulControlAlarm &= ERROR_E_STOP;
   }
   if(INTERLOCKA_In() == 0)
   {
-	g_ulControlAlarm |= ERROR_INTERLOCKA;
+		g_ulControlAlarm |= ERROR_INTERLOCKA;
   }
   else
   {
-	g_ulControlAlarm &= ERROR_INTERLOCKA;
+		g_ulControlAlarm &= ERROR_INTERLOCKA;
   }
 }
 
@@ -82,17 +92,24 @@ void task2(void)
   }
   if(g_ulControlAlarm & ERROR_QBH)
   {
-	printf("ERROR_QBH \r\n");
+		printf("ERROR_QBH \r\n");
   }
   if(g_ulControlAlarm & ERROR_E_STOP)
   {
-	printf("ERROR_E_STOP \r\n");
+		printf("ERROR_E_STOP \r\n");
   }
+	// printf("     g_ulFlow = %d\r\n", g_ulFlow);
 }
 
 
+//测试 RS232 DMA发送模式
 void task3(void)
 {
+	if(DMA_GetFlagStatus(RS232_USART_DMA_STREAM,DMA_FLAG_TCIF6)!=RESET)//等待DMA1_Steam6传输完成
+	{
+		DMA_ClearFlag(RS232_USART_DMA_STREAM,DMA_FLAG_TCIF6);//清除DMA1_Steam6传输完成标志
+	}
+	DMA_Enable(RS232_USART_DMA_STREAM,SENDBUFF_SIZE);     //开始一次DMA传输！
 }
 
 
@@ -104,10 +121,10 @@ void task4(void)
 
 TaskStruct_T tasks[] =
 {
-   {0,10,10,task1},  //200ms 用各个任务的函数名初始化
-   {0,500,500,task2},	//60ms
-   {0,800,800,task3},	//100ms
-   {0,1000,1000,task4}	//500ms
+   {0,10,10,task1},  //10ms 用各个任务的函数名初始化
+   {0,500,500,task2},	//500ms
+   {0,800,800,task3},	//800ms
+   {0,1000,1000,task4}	//1000ms
 };
 
 //定义任务数量
@@ -137,15 +154,16 @@ void TaskSysClk_Init(u16 period, u16 prescaler)
  }
 
 
- //TIMER3中断
+ //TIMER3中断  1ms一次
 void TIM3_IRQHandler(void)
 {
- u8 i = 0;
- if (RESET != TIM_GetITStatus(TIM3,TIM_IT_Update))//检查TIM3更新中断发生与否
- {
-	 TIM_ClearITPendingBit(TIM3,TIM_IT_Update);
-	 for (i=0; i < task_count; ++i) //遍历任务数组
-	 {
+	u8 i = 0;
+	if (RESET != TIM_GetITStatus(TIM3,TIM_IT_Update))//检查TIM3更新中断发生与否
+	{
+		TIM_ClearITPendingBit(TIM3,TIM_IT_Update);
+		g_ulFlowTimerCnt++;//水流量检测计数
+		for (i=0; i < task_count; ++i) //遍历任务数组
+		{
 		 if (tasks[i].TimerSlice)  //判断时间片是否到了
 		 {
 			  --tasks[i].TimerSlice;
@@ -155,8 +173,8 @@ void TIM3_IRQHandler(void)
 				   tasks[i].TimerSlice = tasks[i].SliceNumber; //重新加载时间片值，为下次做准备
 			   }
 		 }
-	 }
-  }
+		}
+	}
 }
 
 

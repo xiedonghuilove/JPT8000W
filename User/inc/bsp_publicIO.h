@@ -184,6 +184,57 @@
 #define WARNING_OUT_ON()         PFout(15)=1
 #define WARNING_OUT_OFF()        PFout(15)=0
 
+//24V外控使能  检测高电平
+#define OUTSIDE_EN_PIN              GPIO_Pin_7
+#define OUTSIDE_EN_PORT             GPIOE
+#define OUTSIDE_EN_CLK              RCC_AHB1Periph_GPIOE
+
+//PWM
+#define PWM_PIN              GPIO_Pin_10
+#define PWM_PORT             GPIOE
+#define PWM_CLK              RCC_AHB1Periph_GPIOE
+
+//PWM&EN  PE8  下拉输入
+#define PWM_EN_PIN              GPIO_Pin_8
+#define PWM_EN_PORT             GPIOE
+#define PWM_EN_CLK              RCC_AHB1Periph_GPIOE
+#define PWM_EN_In()             PEin(8)
+
+//STOP_CTRL   PH5  推挽输出
+#define STOP_CTRL_PIN              GPIO_Pin_5
+#define STOP_CTRL_PORT             GPIOH
+#define STOP_CTRL_CLK              RCC_AHB1Periph_GPIOH
+#define STOP_CTRL_ON()             PHout(5)=1
+#define STOP_CTRL_OFF()            PHout(5)=0
+
+//INSIDE_EN   内控使能  推挽输出
+#define INSIDE_EN_PIN              GPIO_Pin_3
+#define INSIDE_EN_PORT             GPIOH
+#define INSIDE_EN_CLK              RCC_AHB1Periph_GPIOH
+#define INSIDE_EN_ON()             PHout(3)=1
+#define INSIDE_EN_OFF()            PHout(3)=0
+
+//INSIDE PWM 内控PWM   PH2  推挽输出
+#define INSIDE_PWM_PIN             GPIO_Pin_2
+#define INSIDE_PWM_PORT            GPIOH
+#define INSIDE_PWM_CLK             RCC_AHB1Periph_GPIOH
+#define INSIDE_PWM_ON()            PHout(2)=1
+#define INSIDE_PWM_OFF()           PHout(2)=0
+
+//LSAER_MODE  激光模式控制   PH4    推挽输出
+#define LASER_MODE_PIN                GPIO_Pin_4
+#define LASER_MODE_PORT               GPIOH
+#define LASER_MODE_CLK                RCC_AHB1Periph_GPIOH
+#define LASER_MODE_INSIDE()           PHout(4)=1
+#define LASER_MODE_OUTSIDE()          PHout(4)=0
+
+//引导激光(红光)   PE1
+#define GUIDE_LASER_PIN              GPIO_Pin_1
+#define GUIDE_LASER_PORT             GPIOE
+#define GUIDE_LASER_CLK              RCC_AHB1Periph_GPIOE
+#define GUIDE_LASER_ON()             PEout(1)=1
+#define GUIDE_LASER_OFF()            PEout(1)=0
+
 
 void PublicIO_Init(void);
 
