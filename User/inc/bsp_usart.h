@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include "bsp_sys.h"
 
+#define USART_REC_LEN  						100  	//定义最大接收字节数 200
 
 //引脚定义
 /*
@@ -41,6 +42,8 @@
 
 #define RS232_USART_IRQHandler                  USART2_IRQHandler
 #define RS232_USART_IRQ                 		    USART2_IRQn
+
+extern uint8_t g_ucaUSART2_TX_BUF[USART_REC_LEN];
 /************************************************************/
 //引脚定义
 /*
@@ -86,8 +89,50 @@
 
 #define RS485EN_RX()       PAout(15)=0
 #define RS485EN_TX()       PAout(15)=1
+
+extern uint8_t g_ucaUSART3_TX_BUF[USART_REC_LEN];
+
 /************************************************************/
 
+
+typedef struct
+{
+	uint8_t Buff[USART_REC_LEN];
+	uint8_t Cnt;
+}UART_Rx_TypeDef;
+
+typedef enum
+{
+	HOST_FRAME_IDLE=0,//空闲状态
+	HOST_FRAME_HANDER,//帧头
+  HOST_FRAME_SLAVEADDR,//丛机地址
+	HOST_FRAME_FUNCODE,//读写功能码
+	HOST_FRAME_COMMAND,//帧命令
+  HOST_FRAME_LENGTH,//长度
+	HOST_FRAME_DATA,//帧数据
+	HOST_FRAME_CRC,
+	HOST_FRAME_FINISH,
+}MasterUsartRxFrame_E;
+
+typedef struct
+{
+	uint16_t FrameHander;//帧头
+	uint8_t SlaveAddr;//丛机地址 ID
+	uint8_t Funcode;//功能码
+  uint8_t Command;//命令
+  uint8_t Length;//长度
+  uint32_t Data;//数据 --> 只对写有效
+	uint16_t CheckSum;//CRC校验
+}MasterPacket_T;
+
+typedef struct
+{
+  MasterUsartRxFrame_E FrameStatus;//帧状态
+  MasterPacket_T Package;//帧包
+}MasterUsartData_T;
+extern MasterUsartData_T		UART2_RxData;
+
+extern uint8_t g_ucSendOverFlag;
 
 void RS232_USART_Config(void);
 void RS485_USART_Init(void);

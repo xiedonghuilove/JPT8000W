@@ -1456,7 +1456,7 @@ void USART_ClearITPendingBit(USART_TypeDef* USARTx, uint16_t USART_IT)
   assert_param(IS_USART_ALL_PERIPH(USARTx));
   assert_param(IS_USART_CLEAR_IT(USART_IT)); 
 
-  /* The CTS interrupt is not available for UART4 and UART5 */
+  /* CTS中断不适用于UART4和UART5 */
   if (USART_IT == USART_IT_CTS)
   {
     assert_param(IS_USART_1236_PERIPH(USARTx));

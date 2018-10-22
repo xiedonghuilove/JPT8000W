@@ -214,7 +214,7 @@ static void ADC3_Init(void)
 *	返 回 值:转换结果
 *********************************************************************************************************
 */
-static uint16_t Get_Adc(uint8_t ch)
+uint16_t Get_Adc3(uint8_t ch)
 {
 	  	//设置指定ADC的规则组通道，一个序列，采样时间
 	ADC_RegularChannelConfig(ADC3, ch, 1, ADC_SampleTime_480Cycles );	//ADC1,ADC通道,480个周期,提高采样时间可以提高精确度
@@ -229,14 +229,14 @@ static uint16_t Get_Adc(uint8_t ch)
 /*
 *********************************************************************************************************
 *	函 数 名: Get_Power_PD_Valtage
-*	功能说明: 获得功率监控电压值
-*	形    参:  ch: 无
+*	功能说明: 获得功率监控PD电压值
+*	形    参:  无
 *	返 回 值: uint16_t 功率监控电压AD值
 *********************************************************************************************************
 */
 uint16_t Get_Power_PD_Valtage(void)
 {
-  return Get_Adc(ADC_Channel_9);
+  return Get_Adc3(ADC_Channel_9);
 }
 /*
 *********************************************************************************************************
@@ -246,13 +246,13 @@ uint16_t Get_Power_PD_Valtage(void)
 *	返 回 值:转换结果
 *********************************************************************************************************
 */
-static uint16_t Get_Adc3_Average(uint8_t ch,uint8_t times)
+uint16_t Get_Adc3_Average(uint8_t ch,uint8_t times)
 {
 	u32 temp_val=0;
 	u8 t;
 	for(t=0;t<times;t++)
 	{
-		temp_val+=Get_Adc(ch);
+		temp_val+=Get_Adc3(ch);
 		delay_ms(5);
 	}
 	return temp_val/times;
@@ -281,9 +281,9 @@ void Get_16_Temp(void)
     else AD_S2_L();
 
     delay_ms(3);
-    g_ulaTempBuf[index] = Get_Adc(ADC_Channel_5);
+    g_ulaTempBuf[index] = Get_Adc3(ADC_Channel_5);
     delay_ms(2);
-    g_ulaTempBuf[index+8] = Get_Adc(ADC_Channel_6);
+    g_ulaTempBuf[index+8] = Get_Adc3(ADC_Channel_6);
   	++index;
   	index = index%8;
 }

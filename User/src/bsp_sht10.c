@@ -337,47 +337,51 @@ void SHT10_Calculate(u16 t, u16 rh, u32 *p_temperature, u32 *p_humidity)
 		*p_humidity = RHture;
 		*p_temperature = t;
 }
-/***************************************************************
-读取温度，数据稳定下来需要320ms
-***************************************************************/
-u32 SHT10_Get_Temp(void)
+/*
+*********************************************************************************************************
+*	函 数 名: SHT10_Get_Temp
+*	功能说明: 读取温度，数据稳定下来需要320ms
+*	形    参:  *_tempvalue
+*	返 回 值:  uint8_t err  0 --> 正确
+*                        1  --> 错误
+*********************************************************************************************************
+*/
+uint8_t SHT10_Get_Temp(uint32_t *_tempvalue)
 {
 	u8 err=0,checksum=0;
 	u16 humi_val=0,temp_val;
 	err += SHT10_Measure(&temp_val, &checksum, TEMP);
 	if(err != 0)
 	{
-		err = 0;
+		err = 1;
 		SHT10_ConReset();
-		return 0;
 	}
 	else
 	{
 		SHT10_Calculate(temp_val, humi_val,&M_T,&M_H);
-        return M_T;
-		// GD_BUF[INDEX_CONTROL_TEMP]=M_T
+    *_tempvalue = M_T;
 	}
+  return err;
 }
 /***************************************************************
 读取湿度，数据稳定下来需要320ms
 ***************************************************************/
-u32 SHT10_Get_Humi(void)
+uint8_t SHT10_Get_Humi(uint32_t *_tempvalue)
 {
 	u8 err=0,checksum=0;
 	u16 humi_val,temp_val=0;
 	err += SHT10_Measure(&humi_val, &checksum, HUMI);
 	if(err != 0)
 	{
-		err = 0;
+		err = 1;
 		SHT10_ConReset();
-		return 0;
 	}
 	else
 	{
 		SHT10_Calculate(temp_val, humi_val, &M_T, &M_H);
-		// GD_BUF[INDEX_CONTROL_HUMI]=M_H;
-        return M_H;
+    *_tempvalue = M_H;
 	}
+  return err;
 }
 /************************************************************
   Function   ：SHT10_CalcuDewPoint

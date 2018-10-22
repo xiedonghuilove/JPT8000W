@@ -347,7 +347,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>0</Optim>
+            <Optim>1</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -755,6 +755,21 @@
               <FileName>bsp_timer.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\User\src\bsp_timer.c</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_adc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\User\src\bsp_adc.c</FilePath>
+            </File>
+            <File>
+              <FileName>command_parse.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\User\src\command_parse.c</FilePath>
+            </File>
+            <File>
+              <FileName>data.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\User\src\data.c</FilePath>
             </File>
           </Files>
         </Group>

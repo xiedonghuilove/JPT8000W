@@ -33,10 +33,10 @@ typedef enum
 #define USER_LASER_OFF			~(1<<2)
 
 #define ERROR_INTERLOCKA			(1<<12)
-#define ERROR_QBH					(1<<13)
-#define ERROR_E_STOP				(1<<14)
-#define ERROR_WATER					(1<<15)
-
+#define ERROR_QBH							(1<<13)
+#define ERROR_E_STOP					(1<<14)
+#define ERROR_WATER						(1<<15)
+	
 extern uint32_t g_ulFlowTimerCnt;
 extern uint32_t g_ulFlow;
 

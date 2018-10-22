@@ -10,9 +10,20 @@
   */
 
 #include "bsp_usart.h"
+#include "command_parse.h"
+#include "data.h"
 
-uint8_t s_ucaUSART2_TX_BUF[15] = {0xef,0xfe,0xff,0x00};     //接收缓冲,最大USART_REC_LEN个字节.
-uint8_t s_ucaUSART3_TX_BUF[15] = {0xfe,0xef,0xff,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0,0xF0};     //接收缓冲,最大USART_REC_LEN个字节.
+uint8_t g_ucaUSART2_TX_BUF[USART_REC_LEN] = {0};     //接收缓冲,最大USART_REC_LEN个字节.
+uint8_t g_ucaUSART3_TX_BUF[USART_REC_LEN] = {0};     //接收缓冲,最大USART_REC_LEN个字节.
+
+uint8_t g_ucaUsart2RxBuf[50] = {0};
+uint16_t g_usUsart2RxState = 0;     //接受状态标记
+
+uint8_t g_ucSendOverFlag = 0;
+
+UART_Rx_TypeDef	UART2_RxTmp;
+MasterUsartData_T		UART2_RxData = {HOST_FRAME_IDLE};
+
 /*
 *********************************************************************************************************
 *	函 数 名: RS232_USART_Config
@@ -80,7 +91,7 @@ void RS232_USART_Config(void)
 
 	DMA_InitStructure.DMA_Channel = RS232_USART_DMA_CHANNEL;//通道选择
 	DMA_InitStructure.DMA_PeripheralBaseAddr = RS232_USART_DR_BASE;//DMA外设地址
-	DMA_InitStructure.DMA_Memory0BaseAddr = (u32)s_ucaUSART2_TX_BUF;  //内存地址(要传输的变量的指针)
+	DMA_InitStructure.DMA_Memory0BaseAddr = (u32)g_ucaUSART2_TX_BUF;  //内存地址(要传输的变量的指针)
 	DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;  //方向：从内存到外设
 	DMA_InitStructure.DMA_BufferSize = SENDBUFF_SIZE; //传输大小DMA_BufferSize=SENDBUFF_SIZE
 	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;  //外设地址不增
@@ -161,7 +172,9 @@ void RS485_USART_Init(void)
 
 	/* 使能串口接收中断 */
 	USART_ITConfig(RS485_USART, USART_IT_RXNE, ENABLE);
-
+	/* 禁止发送完成中断 */
+	USART_ITConfig(RS485_USART, USART_IT_TC, DISABLE);
+	
 	/* 嵌套向量中断控制器NVIC配置 */
 	NVIC_InitStructure.NVIC_IRQChannel = RS485_USART_IRQ;  /* 配置USART为中断源 */
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;  /* 抢断优先级为1 */
@@ -176,7 +189,7 @@ void RS485_USART_Init(void)
 
 	DMA_InitStructure.DMA_Channel = RS485_USART_DMA_CHANNEL;//通道选择
 	DMA_InitStructure.DMA_PeripheralBaseAddr = RS485_USART_DR_BASE;//DMA外设地址
-	DMA_InitStructure.DMA_Memory0BaseAddr = (u32)s_ucaUSART3_TX_BUF;  //内存地址(要传输的变量的指针)
+	DMA_InitStructure.DMA_Memory0BaseAddr = (u32)g_ucaUSART3_TX_BUF;  //内存地址(要传输的变量的指针)
 	DMA_InitStructure.DMA_DIR = DMA_DIR_MemoryToPeripheral;  //方向：从内存到外设
 	DMA_InitStructure.DMA_BufferSize = SENDBUFF_485_SIZE; //传输大小DMA_BufferSize=SENDBUFF_SIZE
 	DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;  //外设地址不增
@@ -195,10 +208,111 @@ void RS485_USART_Init(void)
 	while(DMA_GetCmdStatus(RS485_USART_DMA_STREAM) != ENABLE)
 	{
 	}/* 等待DMA数据流有效*/
-	
-	RS485EN_TX();//切换为发送模式
+
+	RS485EN_RX();//默认为接受模式
 
 }
+
+/*
+*********************************************************************************************************
+*	函 数 名: RS232_USART_IRQHandler
+*	功能说明: 串口中断服务函数  fe ef ff 03 10 11 12 13 14 55 aa
+*	形    参:  无
+*	返 回 值:  无
+*********************************************************************************************************
+*/
+void RS232_USART_IRQHandler(void)
+{
+	uint8_t res = 0;
+	uint16_t check_sum_data = 0;
+	if(USART_GetITStatus( RS232_USART, USART_IT_RXNE ) != RESET)
+	{
+		USART_ClearITPendingBit(RS232_USART,USART_IT_RXNE);//清标志位
+		res = USART_ReceiveData( RS232_USART );//读取接收到的数据 USART1->DR 自动清除标志位;
+		if(UART2_RxData.FrameStatus == HOST_FRAME_IDLE)
+			UART2_RxTmp.Cnt = 0;
+		UART2_RxTmp.Buff[UART2_RxTmp.Cnt++] = res;//先取值，后自加
+		switch (UART2_RxData.FrameStatus)
+		{
+			case HOST_FRAME_IDLE:
+			case HOST_FRAME_HANDER://帧头  2字节 0xfe 0xef
+				if(UART2_RxTmp.Cnt == 1)//接收到的第一个字节
+				{
+					if(res != 0xFE) UART2_RxData.FrameStatus = HOST_FRAME_IDLE;
+					else UART2_RxData.FrameStatus = HOST_FRAME_HANDER;
+				}
+				if(UART2_RxTmp.Cnt == 2)//接收到第二个字节
+				{
+					if(res != 0xEF) UART2_RxData.FrameStatus = HOST_FRAME_IDLE;
+					else UART2_RxData.FrameStatus = HOST_FRAME_SLAVEADDR;
+				}
+				break;
+			case HOST_FRAME_SLAVEADDR://丛机地址   3
+					UART2_RxData.FrameStatus = HOST_FRAME_FUNCODE;//读写功能
+					break;
+			case HOST_FRAME_FUNCODE://读写功能    4
+					UART2_RxData.FrameStatus = HOST_FRAME_COMMAND;
+					break;
+			case HOST_FRAME_COMMAND://帧命令    5
+					UART2_RxData.FrameStatus = HOST_FRAME_LENGTH;
+					break;
+			case HOST_FRAME_LENGTH://数据帧长    6
+					UART2_RxData.FrameStatus = HOST_FRAME_DATA;
+					break;
+			case HOST_FRAME_DATA://帧数据    7 8 9 10
+					if(UART2_RxTmp.Cnt == 10)
+						UART2_RxData.FrameStatus = HOST_FRAME_CRC;
+					break;
+			case HOST_FRAME_CRC://帧校验  11 12 0x55 0xaa
+					if(UART2_RxTmp.Cnt == 12)
+					{
+							check_sum_data = (UART2_RxTmp.Buff[10]<<8) | UART2_RxTmp.Buff[11];
+							if(0x55aa == check_sum_data)//校验正确 解析命令 错误则不解析
+							{
+								UART2_RxData.Package.FrameHander = (UART2_RxTmp.Buff[0]<<8) | UART2_RxTmp.Buff[1];
+								UART2_RxData.Package.SlaveAddr = UART2_RxTmp.Buff[2];
+								UART2_RxData.Package.Funcode = UART2_RxTmp.Buff[3];
+								UART2_RxData.Package.Command = UART2_RxTmp.Buff[4];
+								UART2_RxData.Package.Length = UART2_RxTmp.Buff[5];
+								UART2_RxData.Package.Data = (*(uint32_t*)(UART2_RxTmp.Buff+6));//6 7 8 9
+								UART2_RxData.Package.CheckSum = (UART2_RxTmp.Buff[10]<<8) | UART2_RxTmp.Buff[11];
+								PC_CommandParse(&UART2_RxData.Package,&tMasterData);
+							}
+							UART2_RxData.FrameStatus = HOST_FRAME_IDLE;//重新开始
+					}
+				break;
+			default:
+				break;
+		}
+	}
+
+}
+/*
+*********************************************************************************************************
+*	函 数 名: RS485_USART_IRQHandler
+*	功能说明: 串口中断服务函数  fe ef ff 03 10 11 12 13 14 55 aa
+*	形    参:  无
+*	返 回 值:  无
+*********************************************************************************************************
+*/
+void RS485_USART_IRQHandler(void)
+{
+	if(USART_GetITStatus( RS485_USART, USART_IT_RXNE ) != RESET)
+	{
+		USART_ClearITPendingBit(RS485_USART,USART_IT_RXNE);//清标志位
+		
+	}
+	if(USART_GetITStatus( RS485_USART, USART_IT_TC ) != RESET)
+	{
+		USART_ClearITPendingBit(RS485_USART,USART_IT_TC);//清标志位
+
+		RS485EN_RX();//切换为接受模式
+		USART_ITConfig(RS485_USART, USART_IT_RXNE, ENABLE);/* 使能串口接收中断 */
+		USART_ITConfig(RS485_USART, USART_IT_TC, DISABLE);/* 禁止发送完成中断 */
+	}
+}
+
+
 ///重定向c库函数printf到串口，重定向后可使用printf函数
 int fputc(int ch, FILE *f)
 {

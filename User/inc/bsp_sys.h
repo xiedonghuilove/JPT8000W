@@ -102,6 +102,16 @@ typedef __I uint8_t vuc8;
 #define PKout(n)   BIT_ADDR(GPIOK_ODR_Addr,n)  //输出
 #define PKin(n)    BIT_ADDR(GPIOK_IDR_Addr,n)  //输入
 
+#define Byte0(data)                 ((u8 *)(&(data)))[0]
+#define Byte1(data)                 ((u8 *)(&(data)))[1]
+#define Byte2(data)                 ((u8 *)(&(data)))[2]
+#define Byte3(data)                 ((u8 *)(&(data)))[3]
+#define Uint(data)                  *((u32 *)(&data))
+
+#define U16_LowByte						Byte0
+#define U16_HighByte					Byte1
+
+
 void delay_init(u8 SYSCLK);
 void delay_ms(u16 nms);
 void delay_us(u32 nus);

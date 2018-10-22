@@ -340,42 +340,42 @@ void SHT10_Heshuqi_Calculate(u16 t, u16 rh, u32 *p_temperature, u32 *p_humidity)
 /***************************************************************
 读取温度，数据稳定下来需要320ms
 ***************************************************************/
-u32 SHT10_Heshuqi_Get_Temp(void)
+uint8_t SHT10_Heshuqi_Get_Temp(uint32_t *_tempvalue)
 {
 	u8 err=0,checksum=0;
 	u16 humi_val=0,temp_val;
 	err += SHT10_Heshuqi_Measure(&temp_val, &checksum, HESHUQI1_TEMP);
 	if(err != 0)
 	{
-		err = 0;
+		err = 1;
 		SHT10_Heshuqi_ConReset();
-		return 0;
 	}
 	else
 	{
 		SHT10_Heshuqi_Calculate(temp_val, humi_val,&HESHUQI_M_T,&HESHUQI_M_H);
-        return HESHUQI_M_T;
+		*_tempvalue = HESHUQI_M_T;
 	}
+  return err;
 }
 /***************************************************************
 读取湿度，数据稳定下来需要320ms
 ***************************************************************/
-u32 SHT10_Heshuqi_Get_Humi(void)
+uint8_t SHT10_Heshuqi_Get_Humi(uint32_t *_tempvalue)
 {
 	u8 err=0,checksum=0;
 	u16 humi_val,temp_val=0;
 	err += SHT10_Heshuqi_Measure(&humi_val, &checksum, HESHUQI1_HUMI);
 	if(err != 0)
 	{
-		err = 0;
+		err = 1;
 		SHT10_Heshuqi_ConReset();
-		return 0;
 	}
 	else
 	{
 		SHT10_Heshuqi_Calculate(temp_val, humi_val, &HESHUQI_M_T, &HESHUQI_M_H);
-        return HESHUQI_M_H;
+		*_tempvalue = HESHUQI_M_H;
 	}
+  return err;
 }
 /************************************************************
   Function   ：SHT10_CalcuDewPoint

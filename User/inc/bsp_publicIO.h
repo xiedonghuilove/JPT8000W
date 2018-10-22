@@ -164,6 +164,8 @@
 #define MODE_PORT             GPIOG
 #define MODE_CLK              RCC_AHB1Periph_GPIOG
 #define MODE_In()             PGin(1)
+#define MODE_INSIDE           0
+#define MODE_OUTSIDE          1
 
 //REMOTE   PE11    远程控制信号检测高电平
 #define REMOTE_PIN              GPIO_Pin_11

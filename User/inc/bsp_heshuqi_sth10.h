@@ -46,7 +46,7 @@ u8 SHT10_Heshuqi_SoftReset(void);
 u8 SHT10_Heshuqi_Measure(u16 *p_value, u8 *p_checksum, u8 mode);
 void SHT10_Heshuqi_Calculate(u16 t, u16 rh,u32 *p_temperature, u32 *p_humidity);
 float SHT10_Heshuqi_CalcuDewPoint(float t, float h);
-u32 SHT10_Heshuqi_Get_Temp(void);
-u32 SHT10_Heshuqi_Get_Humi(void);
+uint8_t SHT10_Heshuqi_Get_Temp(uint32_t *_tempvalue);
+uint8_t SHT10_Heshuqi_Get_Humi(uint32_t *_tempvalue);
 
 #endif

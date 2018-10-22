@@ -104,9 +104,15 @@ extern uint32_t g_ulaTempBuf[TEMP_NUM];
 #define TEMP15		g_ulaTempBuf[14]
 #define TEMP16		g_ulaTempBuf[12]
 
+#define GetRongDianHe_Temp()		      TEMP5
+#define GetHeShuQi_Temp()			        TEMP1
+#define GetHeShuQi_Water_Temp()		    TEMP2
 
 void Power_ADC_Init(void);
 void Temperature_ADC_Init(void);
 void Get_16_Temp(void);
 uint16_t Get_Power_PD_Valtage(void);
+uint16_t Get_Adc3(uint8_t ch);
+uint16_t Get_Adc3_Average(uint8_t ch,uint8_t times);
+
 #endif
