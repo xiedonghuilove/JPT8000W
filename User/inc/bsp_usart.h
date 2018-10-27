@@ -132,6 +132,24 @@ typedef struct
 }MasterUsartData_T;
 extern MasterUsartData_T		UART2_RxData;
 
+typedef struct
+{
+	uint16_t FrameHander;//帧头
+	uint8_t SlaveAddr;//丛机地址 ID
+	uint8_t Funcode;//功能码
+  uint8_t Command;//命令
+  uint8_t Length;//长度
+  uint16_t* pData;//数据 --> 只对写有效
+	uint16_t CheckSum;//CRC校验
+}ModulePacket_T;
+
+typedef struct
+{
+  MasterUsartRxFrame_E FrameStatus;//帧状态
+  ModulePacket_T Package;//帧包
+}ModuleUsartData_T;
+extern ModuleUsartData_T tUART3_RxData;
+
 extern uint8_t g_ucSendOverFlag;
 
 void RS232_USART_Config(void);

@@ -72,6 +72,7 @@
 #define TEMP_NUM						16
 
 extern uint32_t g_ulaTempBuf[TEMP_NUM];
+extern __IO uint32_t g_usPowerValue;
 
 /*****************************************************************
 *

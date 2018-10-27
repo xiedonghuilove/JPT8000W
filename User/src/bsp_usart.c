@@ -21,9 +21,9 @@ uint16_t g_usUsart2RxState = 0;     //接受状态标记
 
 uint8_t g_ucSendOverFlag = 0;
 
-UART_Rx_TypeDef	UART2_RxTmp;
+UART_Rx_TypeDef	UART2_RxTmp,tUART3_RxTmp;
 MasterUsartData_T		UART2_RxData = {HOST_FRAME_IDLE};
-
+ModuleUsartData_T		tUART3_RxData = {HOST_FRAME_IDLE};
 /*
 *********************************************************************************************************
 *	函 数 名: RS232_USART_Config
@@ -174,7 +174,7 @@ void RS485_USART_Init(void)
 	USART_ITConfig(RS485_USART, USART_IT_RXNE, ENABLE);
 	/* 禁止发送完成中断 */
 	USART_ITConfig(RS485_USART, USART_IT_TC, DISABLE);
-	
+
 	/* 嵌套向量中断控制器NVIC配置 */
 	NVIC_InitStructure.NVIC_IRQChannel = RS485_USART_IRQ;  /* 配置USART为中断源 */
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;  /* 抢断优先级为1 */
@@ -297,16 +297,81 @@ void RS232_USART_IRQHandler(void)
 */
 void RS485_USART_IRQHandler(void)
 {
+	uint8_t res = 0,i = 0;
+	uint16_t check_sum_data = 0;
 	if(USART_GetITStatus( RS485_USART, USART_IT_RXNE ) != RESET)
 	{
-		USART_ClearITPendingBit(RS485_USART,USART_IT_RXNE);//清标志位
-		
+		USART_ClearITPendingBit(RS485_USART,USART_IT_RXNE);//接受完成清标志位
+		res = USART_ReceiveData( RS485_USART );//读取接收到的数据 USART3->DR 自动清除标志位;
+		if(tUART3_RxData.FrameStatus == HOST_FRAME_IDLE)
+			tUART3_RxTmp.Cnt = 0;
+		tUART3_RxTmp.Buff[tUART3_RxTmp.Cnt++] = res;//先取值，后自加
+		switch (tUART3_RxData.FrameStatus)
+		{
+			case HOST_FRAME_IDLE:
+			case HOST_FRAME_HANDER://帧头  2字节 0xfe 0xef
+				if(tUART3_RxTmp.Cnt == 1)//接收到的第一个字节
+				{
+					if(res != 0xFE) tUART3_RxData.FrameStatus = HOST_FRAME_IDLE;
+					else tUART3_RxData.FrameStatus = HOST_FRAME_HANDER;
+				}
+				if(tUART3_RxTmp.Cnt == 2)//接收到第二个字节
+				{
+					if(res != 0xEF) tUART3_RxData.FrameStatus = HOST_FRAME_IDLE;
+					else tUART3_RxData.FrameStatus = HOST_FRAME_SLAVEADDR;
+				}
+				break;
+			case HOST_FRAME_SLAVEADDR://丛机地址   3
+					tUART3_RxData.FrameStatus = HOST_FRAME_FUNCODE;//读写功能
+					break;
+			case HOST_FRAME_FUNCODE://读写功能    4
+					tUART3_RxData.FrameStatus = HOST_FRAME_COMMAND;
+					break;
+			case HOST_FRAME_COMMAND://帧命令    5
+					tUART3_RxData.FrameStatus = HOST_FRAME_LENGTH;
+					break;
+			case HOST_FRAME_LENGTH://数据帧长    6
+					tUART3_RxData.FrameStatus = HOST_FRAME_DATA;
+					break;
+			case HOST_FRAME_DATA://帧数据    7 8 9 10
+					// if(tUART3_RxTmp.Cnt == 10)
+					if(tUART3_RxTmp.Cnt == tUART3_RxTmp.Buff[5]+6)
+						tUART3_RxData.FrameStatus = HOST_FRAME_CRC;
+					break;
+			case HOST_FRAME_CRC://帧校验  11 12 0x55 0xaa
+					if(tUART3_RxTmp.Cnt == tUART3_RxTmp.Buff[5]+6+2)
+					{
+							check_sum_data = (tUART3_RxTmp.Buff[tUART3_RxTmp.Buff[5]+6]<<8) | tUART3_RxTmp.Buff[tUART3_RxTmp.Buff[5]+6+1];
+							if(0x55aa == check_sum_data)//校验正确 解析命令 错误则不解析
+							{
+								tUART3_RxData.Package.FrameHander = (tUART3_RxTmp.Buff[0]<<8) | tUART3_RxTmp.Buff[1];
+								tUART3_RxData.Package.SlaveAddr = tUART3_RxTmp.Buff[2];
+								tUART3_RxData.Package.Funcode = tUART3_RxTmp.Buff[3];
+								tUART3_RxData.Package.Command = tUART3_RxTmp.Buff[4];
+								tUART3_RxData.Package.Length = tUART3_RxTmp.Buff[5];
+								tUART3_RxData.Package.pData = (uint16_t*)(tUART3_RxTmp.Buff+6);//6 7
+								tUART3_RxData.Package.CheckSum = (tUART3_RxTmp.Buff[tUART3_RxTmp.Buff[5]+6]<<8) | tUART3_RxTmp.Buff[tUART3_RxTmp.Buff[5]+6+1];
+								// PC_CommandParse(&tUART3_RxData.Package,&tMasterData);
+								for (i = 1;i<=MODULE_NUM;i++)
+								{
+									if(tUART3_RxData.Package.SlaveAddr == i)break;
+								}
+								RS485_CommandParse(&tUART3_RxData.Package,tUART3_RxData.Package.Length/2, &tUART3_RxTmp.Buff[6], &taModuleData[i-1]);
+								tMasterData.Power = taModuleData[i-1].SubControlPower;
+							}
+							tUART3_RxData.FrameStatus = HOST_FRAME_IDLE;//重新开始
+					}
+				break;
+			default:
+				break;
+		}
+
 	}
 	if(USART_GetITStatus( RS485_USART, USART_IT_TC ) != RESET)
 	{
-		USART_ClearITPendingBit(RS485_USART,USART_IT_TC);//清标志位
+		USART_ClearITPendingBit(RS485_USART,USART_IT_TC);//发送完成清标志位
 
-		RS485EN_RX();//切换为接受模式
+		RS485EN_RX();//发送完成切换为接受模式
 		USART_ITConfig(RS485_USART, USART_IT_RXNE, ENABLE);/* 使能串口接收中断 */
 		USART_ITConfig(RS485_USART, USART_IT_TC, DISABLE);/* 禁止发送完成中断 */
 	}

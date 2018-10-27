@@ -8,15 +8,17 @@
 //定义模块总数
 #define MODULE_NUM          8
 
-#define MASTER_ID			0xfe
-#define MODULE_ID_1			0x01
-#define MODULE_ID_2			0x02
-#define MODULE_ID_3			0x04
-#define MODULE_ID_4			0x08
-#define MODULE_ID_5			0x10
-#define MODULE_ID_6			0x20
-#define MODULE_ID_7			0x40
-#define MODULE_ID_8			0x80
+#define BROADCAST_ADDRESS   0xff
+#define MASTER_ID			      0xfe
+#define MODULE_ID_1			    0x01
+#define MODULE_ID_2			    0x02
+#define MODULE_ID_3			    0x04
+#define MODULE_ID_4			    0x08
+#define MODULE_ID_5			    0x10
+#define MODULE_ID_6			    0x20
+#define MODULE_ID_7			    0x40
+#define MODULE_ID_8			    0x80
+
 extern uint32_t g_aSubcontrolID[MODULE_NUM];
 /*
 ******************************************************************************
@@ -35,7 +37,12 @@ typedef struct
   uint16_t TestSwitch;//内控switch
   uint16_t WaterFlow;//水流量
   uint16_t FlashWaterFlow;//水流量报警点
-  uint16_t ModeSelection;//模块选择
+  uint16_t FlashHeshuqiTemp;//合束器温度报警点
+  uint16_t FlashHeshuqiWaterTemp;//合束器水冷板温度报警点
+  uint16_t FlashRongdianheTemp;//熔点盒温度报警点
+  uint16_t FlashRedUserState;//红光用户控制状态
+  uint16_t FlashModeSelection;//模块选择
+	uint16_t FlashHeshuqiRedCurrent;//红光电流
   uint16_t RongdianheTemp;//熔点盒温度
   uint16_t HeshuqiTemp;//合束器温度
   uint16_t HeshuqiWaterTemp;//合束器水冷板温度
@@ -73,7 +80,7 @@ typedef enum {
 */
 typedef struct
 {
-  uint8_t ID;//子模块ID
+  uint16_t ID;//子模块ID
   uint16_t ElectricalTemp;//电模块温度
   uint16_t ElectricalHumi;//电模块湿度
   uint16_t ElectricalWaterTemp;//电模块水冷板
@@ -87,17 +94,22 @@ typedef struct
   uint16_t I7;
   uint16_t I8;
   uint16_t I9;
-  uint16_t Version;//版本号
+  uint16_t SubControlVersion;//子控制板版本号
   uint16_t OverVoltage;//过压
   uint16_t LowVoltage;//低压
-  uint8_t FullPowerAdjustment;//满功率微调
+  uint16_t FullPowerAdjustment;//满功率微调
   uint16_t RedPhotocurrent;//红光电流
   uint16_t ForwardReferenceVoltage;//前向光参考电压
-  uint8_t OverElectricalWaterTemp;//过电模块水冷板
-  uint8_t OverOpticalWaterTemp;//光模块水冷板
+  uint16_t OverElectricalWaterTemp;//过电模块水冷板
+  uint16_t OverOpticalWaterTemp;//过光模块水冷板
   uint16_t BiasReferenceVoltage;//偏置参考电压
-  uint8_t GuideState;//指示光状态
-  uint16_t CommunicationCount;//通信计数
+  uint16_t GuideState;//指示光状态
+  uint16_t DriverVersion;//驱动板版本号
+	uint16_t SubControlPower;//子控制板功率
+	uint16_t Voltage_1;//电压值1
+  uint16_t Voltage_2;//电压值2
+  uint16_t Voltage_3;//电压值3
+  uint16_t SubControlAlarm;//子模块报警值
 }ModuleData_T;
 extern ModuleData_T taModuleData[MODULE_NUM];
 /*
@@ -119,9 +131,19 @@ typedef enum {
   CMD_MODULE_POWER,
 }MODULE_FRAME_COMMAND_E;
 
-
-
+enum Flash_Index{
+    Index_CheckData = 0,
+    Index_FlashWaterFlow,
+		Index_FlashModeSelection,
+    Index_FlashHeshuqiTemp,
+    Index_FlashHeshuqiWaterTemp,
+    Index_FlashRongdianheTemp,
+    Index_FlashRedUserState,
+    Index_FlashHeshuqiRedCurrent,
+    INDEX_FLASH_NUM,
+};
+extern uint16_t g_ulaBufFlash[INDEX_FLASH_NUM];
 
 void Scan_Mode(void);
-
+void EE_Flash_Set_Data(void);
 #endif

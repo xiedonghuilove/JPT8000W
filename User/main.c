@@ -6,7 +6,6 @@
   * @date    2018-xx-xx
   ******************************************************************************
   */
-
 #include "stm32f4xx.h"
 #include "bsp_led.h"
 #include "bsp_sys.h"
@@ -24,10 +23,8 @@
 #include "bsp_os.h"
 #include "bsp_exti.h"
 #include "data.h"
-
-//extern uint16_t g_usPowerValue;
-
-extern __IO uint16_t g_usPowerValue;
+#include "bsp_i2c_gpio.h"
+#include "bsp_eeprom_24xx.h"
 
 uint32_t g_ulTimer_500Ms = 0,g_ulTimer_1s = 0,g_ulTimer_250Ms = 0;
 FATFS 	fs;
@@ -57,18 +54,25 @@ int main(void)
 	Temperature_ADC_Init();						//温度采集ADC初始化
 	SHT10_Heshuqi_Config();						//合束器SHT10初始化
 	SHT10_Config();								//机柜SHT10初始化
-	PCF8563_IIC_Init();             			//需要使用PCF8563时，先初始化IIC时钟
-	
+	PCF8563_IIC_Init();           //需要使用PCF8563时，先初始化IIC时钟
+	bsp_InitI2C();							/* 配置I2C总线 */
+
 	USART_DMACmd(RS232_USART,USART_DMAReq_Tx,ENABLE);  //使能串口的DMA发送。
 	USART_DMACmd(RS485_USART,USART_DMAReq_Tx,ENABLE);  //使能串口的DMA发送。
-	taModuleData[0].ID = 1;
-	taModuleData[1].ID = 2;
-	taModuleData[2].ID = 4;
-	taModuleData[3].ID = 8;
-	taModuleData[4].ID = 16;
-	taModuleData[5].ID = 32;
-	taModuleData[6].ID = 64;
-	taModuleData[7].ID = 128;
+
+
+	if (ee_CheckOk() == 0)
+	{
+		/* 没有检测到EEPROM */
+		printf(" Not Detection EEPROM!\r\n");
+
+		while (1);	/* 停机 */
+	}
+
+	printf("detected Succuss EEPROM : \r\n");
+	printf("Type: %s, Size = %d Byte, Page Size = %d\r\n", EE_MODEL_NAME, EE_SIZE, EE_PAGE_SIZE);
+	EE_Flash_Set_Data();
+
 	while(1)
 	{
 		Task_Process();

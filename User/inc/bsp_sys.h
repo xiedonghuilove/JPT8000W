@@ -36,6 +36,10 @@ typedef __I uint32_t vuc32;
 typedef __I uint16_t vuc16;
 typedef __I uint8_t vuc8;
 
+/* 开关全局中断的宏 */
+#define ENABLE_INT()	__set_PRIMASK(0)	/* 使能全局中断 */
+#define DISABLE_INT()	__set_PRIMASK(1)	/* 禁止全局中断 */
+
 //位带操作,实现51类似的GPIO控制功能
 //具体实现思想,参考<<CM3权威指南>>第五章(87页~92页).M4同M3类似,只是寄存器地址变了.
 //IO口操作宏定义

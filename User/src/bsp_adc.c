@@ -9,7 +9,7 @@
   */
 #include "bsp_adc.h"
 
-__IO uint16_t g_usPowerValue;
+__IO uint32_t g_usPowerValue;
 uint32_t g_ulaTempBuf[TEMP_NUM] = {0};
 
 /*
@@ -86,7 +86,7 @@ static void Power_ADC_Mode_Init(void)
   ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;              // 连续转换	 开启一次即可
   ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;  //禁止外部边沿触发
   //使用软件触发，外部触发不用配置，注释掉即可
-  //ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_CC1;
+  ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_CC1;
   ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;         //数据右对齐
   ADC_InitStructure.ADC_NbrOfConversion = 1;                     //转换通道 1个
 
@@ -199,6 +199,8 @@ static void ADC3_Init(void)
   ADC_InitStructure.ADC_ScanConvMode = DISABLE;//非扫描模式
   ADC_InitStructure.ADC_ContinuousConvMode = DISABLE;//关闭连续转换
   ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;//禁止触发检测，使用软件触发
+	  //使用软件触发，外部触发不用配置，注释掉即可
+  ADC_InitStructure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_CC1;
   ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;//右对齐
   ADC_InitStructure.ADC_NbrOfConversion = 1;//1个转换在规则序列中 也就是只转换规则序列1
   ADC_Init(ADC3, &ADC_InitStructure);//ADC初始化

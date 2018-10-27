@@ -9,8 +9,18 @@
 #include "bsp_heshuqi_sth10.h"
 #include "bsp_usart.h"
 #include "command_parse.h"
+#include "bsp_i2c_gpio.h"
+#include "bsp_eeprom_24xx.h"
+#include "bsp_sys.h"
 
-u32 USER_FLAG=0;//用户标志
+/*
+	全局运行时间，单位1ms
+	最长可以表示 24.85天，如果你的产品连续运行时间超过这个数，则必须考虑溢出问题
+*/
+__IO int32_t g_iRunTime = 0;
+
+
+uint32_t g_ulUserFlag=0;//用户标志
 uint32_t g_ulControlAlarm = 0;
 uint32_t g_ulFlowTimerCnt = 0;
 uint32_t g_ulFlow = 0;
@@ -21,44 +31,43 @@ void task1(void)
 	static u8 start_off=0;
 	if(START_In()==0)
 	{
-		if(start_off<10)
-			start_off++;
+		if(start_off<10)start_off++;
 		start_on=0;
 	}  //扫描模拟PWM翻转
 	else
 	{
-		if(start_on<10)
-			start_on++;
+		if(start_on<10)start_on++;
 		start_off=0;
 	}
 	if((start_on>2)&&(start_on<10))
 	{
 		start_on=10;
-		USER_FLAG|=USER_START_ON;
+		g_ulUserFlag|=USER_START_ON;
 	}
-	if(USER_FLAG & USER_START_ON)
+	if(g_ulUserFlag & USER_START_ON)
 	{
 	  if(START_In() == 1)start_cnt++;
 	  else start_cnt = 0;
 	  if(start_cnt>10)//10ms延时消抖
 	  {
       start_cnt=0;
-      USER_FLAG &= USER_START_OFF;
-      if(USER_FLAG & USER_LASER_ON)//出光预备状态则切换为关闭激光预备状态
+      g_ulUserFlag &= USER_START_OFF;
+      if(g_ulUserFlag & USER_LASER_ON)//出光预备状态则切换为关闭激光预备状态
       {
-        USER_FLAG &= USER_LASER_OFF;//关闭出光预备状态
+        g_ulUserFlag &= USER_LASER_OFF;//关闭出光预备状态
         PANEL_STAR_OFF();
 				STOP_CTRL_OFF();
-				INSIDE_PWM_OFF();//内控PWM打开
-				INSIDE_EN_OFF();//内控EN打开
+				tMasterData.TestSwitch = 0;
+				INSIDE_PWM_OFF();//内控PWM关闭
+				// INSIDE_EN_OFF();//内控EN关闭
       }
   		else //关闭出光预备状态则切换为出光预备状态
   		{
-  		  USER_FLAG |= USER_LASER_ON;
+  		  g_ulUserFlag |= USER_LASER_ON;
   		  PANEL_STAR_ON();//面板灯打开
 				STOP_CTRL_ON();//STOP打开
-				INSIDE_PWM_ON();//内控PWM打开
-				INSIDE_EN_ON();//内控EN打开
+				// INSIDE_PWM_ON();//内控PWM打开
+				// INSIDE_EN_ON();//内控EN打开
   		}
 	  }
 
@@ -96,19 +105,7 @@ void osGetTemp_500MS_Task(void)
 	uint32_t tempvalue = 0;
 
 	static uint8_t s_ucIndex = 0;
-  if(g_ulControlAlarm & ERROR_INTERLOCKA)
-  {
-    printf("ERROR_INTERLOCKA \r\n");
-  }
-  if(g_ulControlAlarm & ERROR_QBH)
-  {
-		printf("ERROR_QBH \r\n");
-  }
-  if(g_ulControlAlarm & ERROR_E_STOP)
-  {
-		printf("ERROR_E_STOP \r\n");
-  }
-	// printf("     g_ulFlow = %d\r\n", g_ulFlow);
+
 	//采集温度
 	for(i=0;i<8;i++)// 8 * 2 = 16
 	{
@@ -143,6 +140,32 @@ void osGetTemp_500MS_Task(void)
 				break;
 	}
 	LED4_Out() = !LED4_Out();
+
+	//判断写flash标志
+	if(g_ucWriteFlashFlag>0)
+	{
+		g_ulaBufFlash[Index_CheckData] = 0x55AA;
+		g_ulaBufFlash[Index_FlashWaterFlow] = tMasterData.FlashWaterFlow;
+		g_ulaBufFlash[Index_FlashModeSelection] = tMasterData.FlashModeSelection;
+		g_ulaBufFlash[Index_FlashHeshuqiTemp] = tMasterData.FlashHeshuqiTemp;
+		g_ulaBufFlash[Index_FlashHeshuqiWaterTemp] = tMasterData.FlashHeshuqiWaterTemp;
+		g_ulaBufFlash[Index_FlashRongdianheTemp] = tMasterData.FlashRongdianheTemp;
+		g_ulaBufFlash[Index_FlashRedUserState] = tMasterData.FlashRedUserState;
+		g_ulaBufFlash[Index_FlashHeshuqiRedCurrent] = tMasterData.FlashHeshuqiRedCurrent;
+	}
+	switch (g_ucWriteFlashFlag) {
+		case 1:
+		ee_WriteBytes(1, NULL,0, EE_SIZE);
+//		ee_WriteBytes(0,(uint8_t*)(&FLASH_CHECK),0,4);
+		g_ucWriteFlashFlag = 0;
+		break;
+		case 2:
+		ee_WriteBytes(0, (uint8_t*)g_ulaBufFlash,0,sizeof(g_ulaBufFlash));
+		g_ucWriteFlashFlag = 0;
+		break;
+		default:
+		break;
+	}
 }
 
 
@@ -155,16 +178,6 @@ void task3(void)
 
 void task4(void)
 {
-//   printf("task4.\r\n");
-//	printf("sizeof(usart) = %d\r\n",sizeof(UART2_RxData));
-//	printf("sizeof(Package) = %d\r\n",sizeof(UART2_RxData.Package));
-//	printf("sizeof(Package.FrameHander) = %d\r\n",sizeof(UART2_RxData.Package.FrameHander));
-//	printf("sizeof(Package.SlaveAddr) = %d\r\n",sizeof(UART2_RxData.Package.SlaveAddr));
-//	printf("sizeof(Package.Funcode) = %d\r\n",sizeof(UART2_RxData.Package.Funcode));
-//	printf("sizeof(Package.Command) = %d\r\n",sizeof(UART2_RxData.Package.Command));
-//	printf("sizeof(Package.Data) = %d\r\n",sizeof(UART2_RxData.Package.Data));
-//	printf("sizeof(Package.CheckSum) = %d\r\n",sizeof(UART2_RxData.Package.CheckSum));
-
 }
 
 TaskStruct_T tasks[] =
@@ -177,6 +190,27 @@ TaskStruct_T tasks[] =
 
 //定义任务数量
 u32 task_count = sizeof(tasks) / sizeof(TaskStruct_T);
+
+/*
+*********************************************************************************************************
+*	函 数 名: bsp_GetRunTime
+*	功能说明: 获取CPU运行时间，单位1ms。最长可以表示 24.85天，如果你的产品连续运行时间超过这个数，则必须考虑溢出问题
+*	形    参:  无
+*	返 回 值: CPU运行时间，单位1ms
+*********************************************************************************************************
+*/
+int32_t bsp_GetRunTime(void)
+{
+	int32_t runtime;
+
+	DISABLE_INT();  	/* 关中断 */
+
+	runtime = g_iRunTime;	/* 这个变量在Systick中断中被改写，因此需要关中断进行保护 */
+
+	ENABLE_INT();  		/* 开中断 */
+
+	return runtime;
+}
 
 void TaskSysClk_Init(u16 period, u16 prescaler)
 {
@@ -202,6 +236,7 @@ void TaskSysClk_Init(u16 period, u16 prescaler)
  }
 
 
+
  //TIMER3中断  1ms一次
 void TIM3_IRQHandler(void)
 {
@@ -210,6 +245,7 @@ void TIM3_IRQHandler(void)
 	if (RESET != TIM_GetITStatus(TIM3,TIM_IT_Update))//检查TIM3更新中断发生与否
 	{
 		TIM_ClearITPendingBit(TIM3,TIM_IT_Update);
+
 		g_ulFlowTimerCnt++;//水流量检测计数
 		OS_timerCnt++;
 		if(OS_timerCnt>37)
@@ -217,6 +253,14 @@ void TIM3_IRQHandler(void)
 			Master_SendPackagetoSubcotrol();
 			OS_timerCnt = 0;
 		}
+
+		/* 全局运行时间每1ms增1 */
+		g_iRunTime++;
+		if (g_iRunTime == 0x7FFFFFFF)	/* 这个变量是 int32_t 类型，最大数为 0x7FFFFFFF */
+		{
+			g_iRunTime = 0;
+		}
+
 		for (i=0; i < task_count; ++i) //遍历任务数组
 		{
 		 if (tasks[i].TimerSlice)  //判断时间片是否到了
