@@ -11,9 +11,16 @@ extern uint8_t g_ucWriteFlashFlag;
 enum CMD_Type{
     CMD_Version = 0,
     CMD_Erase_FULL,
-		CMD_Select_Module,
+    CMD_Select_Module,
     CMD_Power,
     CMD_Switch_Laser,
+    CMD_Write_Water,
+    CMD_Write_QBHWatre,
+    CMD_Write_HeshuqiTemp,
+    CMD_Write_HeshuqiWaterTemp,
+    CMD_Write_HeshuqiRedCurrent,
+    CMD_Write_RedUserState,
+    CMD_Guide_UserControl,
     CMD_NUM,
 };
 

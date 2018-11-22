@@ -172,6 +172,8 @@
 #define REMOTE_PORT             GPIOE
 #define REMOTE_CLK              RCC_AHB1Periph_GPIOE
 #define REMOTE_In()             PEin(11)
+#define REMOTE_ON						1
+#define REMOTE_OFF						0
 
 //INTERLOCKB   PE12    检测高电平
 #define INTERLOCKB_PIN              GPIO_Pin_12
@@ -236,6 +238,18 @@
 #define GUIDE_LASER_CLK              RCC_AHB1Periph_GPIOE
 #define GUIDE_LASER_ON()             PEout(1)=1
 #define GUIDE_LASER_OFF()            PEout(1)=0
+
+//拨码开关K1  检测低电平，上拉输入
+#define KEY_K1_PIN                   GPIO_Pin_2 
+#define KEY_K1_PORT                  GPIOE
+#define KEY_K1_CLK                   RCC_AHB1Periph_GPIOE
+#define KEY_K1_In()                  PEin(2)
+
+//拨码开关K2
+#define KEY_K2_PIN                   GPIO_Pin_3 
+#define KEY_K2_PORT                  GPIOE
+#define KEY_K2_CLK                   RCC_AHB1Periph_GPIOE
+#define KEY_K2_In()                  PEin(3)
 
 
 void PublicIO_Init(void);

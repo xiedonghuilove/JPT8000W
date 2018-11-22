@@ -8,6 +8,7 @@
   ******************************************************************************
   */
 #include "bsp_adc.h"
+#include <stdint.h>
 
 __IO uint32_t g_usPowerValue;
 uint32_t g_ulaTempBuf[TEMP_NUM] = {0};
@@ -70,7 +71,7 @@ static void Power_ADC_Mode_Init(void)
   DMA_InitStructure.DMA_MemoryBurst = DMA_MemoryBurst_Single;
   DMA_InitStructure.DMA_PeripheralBurst = DMA_PeripheralBurst_Single;
   DMA_InitStructure.DMA_Channel = POWER_ADC_DMA_CHANNEL;         // 选择 DMA 通道，通道存在于流中
-
+  
   //初始化DMA流，流相当于一个大的管道，管道里面有很多通道
   DMA_Init(POWER_ADC_DMA_STREAM, &DMA_InitStructure);
 

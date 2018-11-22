@@ -26,8 +26,8 @@ void PublicIO_Init(void)
                            TOP_RED_GPIO_CLK|
                            RELAY_3_GPIO_CLK|
                            RELAY_4_GPIO_CLK|
-						   LEAK_WATER_CLK|
-						   RED_CTR_CLK, ENABLE);
+														LEAK_WATER_CLK|
+														RED_CTR_CLK, ENABLE);
 
   //推挽输出
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
@@ -121,6 +121,13 @@ void PublicIO_Init(void)
 	GPIO_InitStructure.GPIO_Pin = QBH1_PIN;
 	GPIO_Init(QBH1_PORT, &GPIO_InitStructure);
 
+	//K1 检测低电平
+	GPIO_InitStructure.GPIO_Pin = KEY_K1_PIN;
+	GPIO_Init(KEY_K1_PORT, &GPIO_InitStructure);
+
+	//K2 检测低电平
+	GPIO_InitStructure.GPIO_Pin = KEY_K2_PIN;
+	GPIO_Init(KEY_K2_PORT, &GPIO_InitStructure);
 
 	//START 下拉输入  检测高电平
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN;

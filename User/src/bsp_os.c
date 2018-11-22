@@ -12,6 +12,8 @@
 #include "bsp_i2c_gpio.h"
 #include "bsp_eeprom_24xx.h"
 #include "bsp_sys.h"
+#include "bsp_warning.h"
+#include "bsp_exti.h"
 
 /*
 	全局运行时间，单位1ms
@@ -20,15 +22,17 @@
 __IO int32_t g_iRunTime = 0;
 
 
-uint32_t g_ulUserFlag=0;//用户标志
-uint32_t g_ulControlAlarm = 0;
-uint32_t g_ulFlowTimerCnt = 0;
-uint32_t g_ulFlow = 0;
+uint32_t g_ulUserFlag = 0;//用户标志
+
+uint32_t g_ulaFlowTimerCnt[WATER_FLOW_NUM] = {0};
+uint32_t g_ulaFlowIOFlag[WATER_FLOW_NUM] = {0};
+
 void task1(void)
 {
-	static u8 start_cnt=0;
-	static u8 start_on=0;
-	static u8 start_off=0;
+	static u8 start_cnt=0,remote_up=0,remote_down=0;
+	static u8 start_on=0,remote_on=0;
+	static u8 start_off=0,remote_off=0;
+	int i = 0;
 	if(START_In()==0)
 	{
 		if(start_off<10)start_off++;
@@ -44,58 +48,127 @@ void task1(void)
 		start_on=10;
 		g_ulUserFlag|=USER_START_ON;
 	}
-	if(g_ulUserFlag & USER_START_ON)
+	if((g_ulUserFlag & USER_START_ON)&&(tMasterData.AlarmLowBit<1))
 	{
-	  if(START_In() == 1)start_cnt++;
-	  else start_cnt = 0;
-	  if(start_cnt>10)//10ms延时消抖
-	  {
-      start_cnt=0;
-      g_ulUserFlag &= USER_START_OFF;
-      if(g_ulUserFlag & USER_LASER_ON)//出光预备状态则切换为关闭激光预备状态
-      {
-        g_ulUserFlag &= USER_LASER_OFF;//关闭出光预备状态
-        PANEL_STAR_OFF();
+	  	if(START_In() == 1)start_cnt++;
+	  	else start_cnt = 0;
+	  	if(start_cnt>10)//10ms延时消抖
+	  	{
+			start_cnt=0;
+			g_ulUserFlag &= USER_START_OFF;
+			g_ulUserFlag &= USER_READY_OFF;
+			
+			if(g_ulUserFlag & USER_LASER_ON)//出光预备状态则切换为关闭激光预备状态
+			{
+				g_ulUserFlag &= USER_LASER_OFF;//关闭出光预备状态
+				PANEL_STAR_OFF();
 				STOP_CTRL_OFF();
 				tMasterData.TestSwitch = 0;
 				INSIDE_PWM_OFF();//内控PWM关闭
 				// INSIDE_EN_OFF();//内控EN关闭
-      }
-  		else //关闭出光预备状态则切换为出光预备状态
-  		{
-  		  g_ulUserFlag |= USER_LASER_ON;
-  		  PANEL_STAR_ON();//面板灯打开
+			}
+			else //关闭出光预备状态则切换为出光预备状态
+			{
+				g_ulUserFlag |= USER_LASER_ON;
+				PANEL_STAR_ON();//面板灯打开
 				STOP_CTRL_ON();//STOP打开
-				// INSIDE_PWM_ON();//内控PWM打开
-				// INSIDE_EN_ON();//内控EN打开
-  		}
+			}
 	  }
 
 	}
-  if((QBH1_In() == 0) && (QBH2_In() == 0) && (QBH3_In() == 0))
-  {
-    g_ulControlAlarm |= ERROR_QBH;
-  }
-  else
-  {
-		g_ulControlAlarm &= ~ERROR_QBH;
-  }
-  if(STOP_In() == 1)
-  {
-    g_ulControlAlarm |= ERROR_E_STOP;
-  }
-  else
-  {
-		g_ulControlAlarm &= ~ERROR_E_STOP;
-  }
-  if(INTERLOCKA_In() == 0)
-  {
-		g_ulControlAlarm |= ERROR_INTERLOCKA;
-  }
-  else
-  {
-		g_ulControlAlarm &= ~ERROR_INTERLOCKA;
-  }
+
+	//REMOTE 扫描定时触发
+	if(REMOTE_In()==0)
+	{
+		if(remote_off<10)remote_off++;
+		remote_on=0;
+	}
+	else
+	{
+		if(remote_on<10)remote_on++;
+		remote_off=0;
+	}
+	if((remote_on>2)&&(remote_on<10))
+	{
+		remote_on = 10;
+		g_ulUserFlag|=USER_READY_ON;
+	}
+	if((remote_off>2)&&(remote_off<10))
+	{
+		remote_off = 10;
+		g_ulUserFlag|=USER_READY_ON;
+	}
+	//远程按钮检测  模拟START按键检测
+	if((g_ulUserFlag & USER_READY_ON)&&(tMasterData.AlarmLowBit<1))
+	{
+		if(REMOTE_In()==REMOTE_ON)
+		{
+			remote_up++;
+			remote_down=0;
+		}
+		else
+		{
+			remote_up = 0;
+			remote_down++;
+		}
+		if(remote_up>40)//40*5 = 200ms消抖   检测到高电平 START灯亮
+		{
+			remote_up = 0;
+			g_ulUserFlag &= USER_READY_OFF; //清检测标志位
+			g_ulUserFlag |= USER_LASER_ON;
+			PANEL_STAR_ON();//面板灯打开
+			STOP_CTRL_ON();//STOP打开
+		}
+		else if(remote_down>40)//检测到低电平。START灯灭。
+		{
+			remote_down = 0;	
+			g_ulUserFlag &= USER_READY_OFF; //清检测标志位,外部定时器触发一次，这样就不会每次都进这部分功能
+			g_ulUserFlag &= USER_LASER_OFF;//关闭出光预备状态
+			PANEL_STAR_OFF();
+			STOP_CTRL_OFF();
+			tMasterData.TestSwitch = 0;
+			INSIDE_PWM_OFF();//内控PWM关闭
+			// INSIDE_EN_OFF();//内控EN关闭
+		}
+	}
+
+	if((QBH1_In() == 0) && (QBH2_In() == 0) && (QBH3_In() == 0))
+	{
+		tMasterData.AlarmLowBit |= ERROR_MASTER_QBH;
+		Alarm_Close_Laser();
+	}
+	if(STOP_In() == 1)
+	{
+		tMasterData.AlarmLowBit |= ERROR_MASTER_E_STOP;
+		Alarm_Close_Laser();
+	}
+	if(INTERLOCKA_In() == 0)
+	{
+		tMasterData.AlarmLowBit |= ERROR_MASTER_INTERLOCKA;
+		Alarm_Close_Laser();
+	}
+	//状态指示灯控制
+	Guide_LED_Status_Control();
+
+	//子模块报警切激光
+	for(i = 0; i < MODULE_NUM;i++)
+	{
+		if(Moudle_Warning_In(i)&&(tMasterData.FlashModeSelection&(1<<i)))
+		{
+			Alarm_Close_Laser();
+            tMasterData.AlarmLowBit |= ERROR_MASTER_SUBCONTROL;
+		}
+		if(tMasterData.FlashModeSelection&(1<<i))
+		{
+			g_ulaModuleCommunicationCnt[i]++;
+			if(g_ulaModuleCommunicationCnt[i] > SubControl_TimeOut)
+			{
+				taModuleData[i].SubControlAlarm |= ERROR_SUB_COMMUNICATION;
+				Alarm_Close_Laser();//关闭激光
+			}
+		}	
+	}
+
 }
 
 
@@ -105,6 +178,7 @@ void osGetTemp_500MS_Task(void)
 	uint32_t tempvalue = 0;
 
 	static uint8_t s_ucIndex = 0;
+	static uint8_t s_ucTempAlarmFlag[3] = {0};
 
 	//采集温度
 	for(i=0;i<8;i++)// 8 * 2 = 16
@@ -133,6 +207,17 @@ void osGetTemp_500MS_Task(void)
 		case 4: tMasterData.RongdianheTemp = Get_Adc3(ADC_Channel_12);
 				tMasterData.HeshuqiTemp = GetHeShuQi_Temp();//合束器温度
 				tMasterData.HeshuqiWaterTemp = GetHeShuQi_Water_Temp();//合束器水冷板温度
+				//增加温度报警处理
+				if(tMasterData.HeshuqiWaterTemp > TEMP_LD[tMasterData.FlashHeshuqiWaterTemp-10])
+				{
+					s_ucTempAlarmFlag[0]++;
+					if(s_ucTempAlarmFlag[0]>1)
+					{
+						s_ucTempAlarmFlag[0] = 5;
+						tMasterData.AlarmLowBit |= ERROR_MASTER_HESHUQI_WATER_TEMP;
+						Alarm_Close_Laser();
+					}
+				}
 				s_ucIndex++;
 				break;
 		default:
@@ -149,14 +234,14 @@ void osGetTemp_500MS_Task(void)
 		g_ulaBufFlash[Index_FlashModeSelection] = tMasterData.FlashModeSelection;
 		g_ulaBufFlash[Index_FlashHeshuqiTemp] = tMasterData.FlashHeshuqiTemp;
 		g_ulaBufFlash[Index_FlashHeshuqiWaterTemp] = tMasterData.FlashHeshuqiWaterTemp;
-		g_ulaBufFlash[Index_FlashRongdianheTemp] = tMasterData.FlashRongdianheTemp;
+		g_ulaBufFlash[Index_FlashQBHWaterFlow] = tMasterData.FlashQBHWaterFlow;
 		g_ulaBufFlash[Index_FlashRedUserState] = tMasterData.FlashRedUserState;
 		g_ulaBufFlash[Index_FlashHeshuqiRedCurrent] = tMasterData.FlashHeshuqiRedCurrent;
 	}
 	switch (g_ucWriteFlashFlag) {
 		case 1:
 		ee_WriteBytes(1, NULL,0, EE_SIZE);
-//		ee_WriteBytes(0,(uint8_t*)(&FLASH_CHECK),0,4);
+        //ee_WriteBytes(0,(uint8_t*)(&FLASH_CHECK),0,4);
 		g_ucWriteFlashFlag = 0;
 		break;
 		case 2:
@@ -228,8 +313,8 @@ void TaskSysClk_Init(u16 period, u16 prescaler)
 
     NVIC_InitStructure.NVIC_IRQChannel = TIM3_IRQn;
     NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;//抢占优先级
-    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 3;
+    NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 4;//抢占优先级
+    NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
     NVIC_Init(&NVIC_InitStructure); //中断初始化
 
     TIM_Cmd(TIM3,ENABLE);//使能定时器
@@ -245,8 +330,28 @@ void TIM3_IRQHandler(void)
 	if (RESET != TIM_GetITStatus(TIM3,TIM_IT_Update))//检查TIM3更新中断发生与否
 	{
 		TIM_ClearITPendingBit(TIM3,TIM_IT_Update);
+		
+		//水流量判断与计数
+		for(i = 0; i < WATER_FLOW_NUM; i++)
+		{
+			g_ulaFlowTimerCnt[i]++;
+			if((g_ulaFlowTimerCnt[i]>3000)&&(PEin(i+2)==1)&&(tMasterData.FlashWaterFlow>0))
+			{
+				g_ulaFlowTimerCnt[i] = 0;
+				WATER_ALARM(i);
+				Alarm_Close_Laser();
+			}
+			if(!PHin(14+i))
+			{
+				g_ulaFlowIOFlag[i]++;
+				if(g_ulaFlowIOFlag[i]>2000)
+				{
+					WATER_FLOW_CLEAR(i);
+				}
+			}
+		}
 
-		g_ulFlowTimerCnt++;//水流量检测计数
+			
 		OS_timerCnt++;
 		if(OS_timerCnt>37)
 		{
@@ -260,18 +365,19 @@ void TIM3_IRQHandler(void)
 		{
 			g_iRunTime = 0;
 		}
-
+		
+		//时间片轮询
 		for (i=0; i < task_count; ++i) //遍历任务数组
 		{
-		 if (tasks[i].TimerSlice)  //判断时间片是否到了
-		 {
-			  --tasks[i].TimerSlice;
-			  if (0 == tasks[i].TimerSlice) //时间片到了
-			  {
-				   tasks[i].isRun = 0x01;//置位  表示任务可以执行
-				   tasks[i].TimerSlice = tasks[i].SliceNumber; //重新加载时间片值，为下次做准备
-			  }
-		 }
+			if (tasks[i].TimerSlice)  //判断时间片是否到了
+			{
+				--tasks[i].TimerSlice;
+				if (0 == tasks[i].TimerSlice) //时间片到了
+				{
+					tasks[i].isRun = 0x01;//置位  表示任务可以执行
+					tasks[i].TimerSlice = tasks[i].SliceNumber; //重新加载时间片值，为下次做准备
+				}
+			}
 		}
 	}
 }

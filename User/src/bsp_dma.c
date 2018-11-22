@@ -33,7 +33,7 @@ void DMA_Config(DMA_Stream_TypeDef *DMA_Streamx,u32 chx,u32 par,u32 mar,u16 ndtr
     DMA_DeInit(DMA_Streamx);
 
   	while (DMA_GetCmdStatus(DMA_Streamx) != DISABLE){}//等待DMA可配置
-
+    
     /* 配置 DMA Stream */
     DMA_InitStructure.DMA_Channel = chx;  //通道选择
     DMA_InitStructure.DMA_PeripheralBaseAddr = par;//DMA外设地址

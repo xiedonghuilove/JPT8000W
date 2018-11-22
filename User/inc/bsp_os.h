@@ -4,6 +4,7 @@
 #include "stm32f4xx.h"
 #include "stdio.h"
 #include "bsp_sys.h"
+#include "bsp_exti.h"
 
 //任务结构
 typedef struct tagTaskStruct_T
@@ -29,17 +30,19 @@ typedef enum
 
 #define USER_START_ON			 (1<<0)
 #define USER_START_OFF			~(1<<0)
+#define USER_READY_ON			 (1<<1)//2
+#define USER_READY_OFF			~(1<<1)
 #define USER_LASER_ON			 (1<<2)//4
 #define USER_LASER_OFF			~(1<<2)
 
-#define ERROR_INTERLOCKA			(1<<12)
-#define ERROR_QBH							(1<<13)
-#define ERROR_E_STOP					(1<<14)
-#define ERROR_WATER						(1<<15)
+
+
+#define SubControl_TimeOut		800
+
 
 extern uint32_t g_ulUserFlag;
-extern uint32_t g_ulFlowTimerCnt;
-extern uint32_t g_ulFlow;
+extern uint32_t g_ulaFlowTimerCnt[WATER_FLOW_NUM];
+extern uint32_t g_ulaFlowIOFlag[WATER_FLOW_NUM];
 
 void Task_Process(void);
 void TaskSysClk_Init(u16 period, u16 prescaler);

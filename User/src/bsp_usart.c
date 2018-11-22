@@ -358,6 +358,9 @@ void RS485_USART_IRQHandler(void)
 								}
 								RS485_CommandParse(&tUART3_RxData.Package,tUART3_RxData.Package.Length/2, &tUART3_RxTmp.Buff[6], &taModuleData[i-1]);
 								tMasterData.Power = taModuleData[i-1].SubControlPower;
+								//添加模块异常
+								g_ulaModuleCommunicationCnt[i-1] = 0;
+
 							}
 							tUART3_RxData.FrameStatus = HOST_FRAME_IDLE;//重新开始
 					}

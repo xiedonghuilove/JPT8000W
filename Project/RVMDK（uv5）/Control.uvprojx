@@ -771,15 +771,35 @@
               <FileType>1</FileType>
               <FilePath>..\..\User\src\data.c</FilePath>
             </File>
+            <File>
+              <FileName>bsp_eeprom_24xx.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\User\src\bsp_eeprom_24xx.c</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_i2c_gpio.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\User\src\bsp_i2c_gpio.c</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_pd.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\User\src\bsp_pd.c</FilePath>
+            </File>
+            <File>
+              <FileName>bsp_warning.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\User\src\bsp_warning.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
           <GroupName>DOC</GroupName>
           <Files>
             <File>
-              <FileName>必读说明.txt</FileName>
+              <FileName>开发记录log.txt</FileName>
               <FileType>5</FileType>
-              <FilePath>..\..\必读说明.txt</FilePath>
+              <FilePath>..\..\开发记录log.txt</FilePath>
             </File>
           </Files>
         </Group>
